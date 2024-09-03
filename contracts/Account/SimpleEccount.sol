@@ -4,7 +4,7 @@ pragma solidity ^0.8.23;
 /* solhint-disable avoid-low-level-calls */
 /* solhint-disable no-inline-assembly */
 /* solhint-disable reason-string */
-import "@fhenixprotocol/contracts/FHE.sol";
+import {FHE} from "@fhenixprotocol/contracts/FHE.sol";
 import {Permissioned, Permission} from "@fhenixprotocol/contracts/access/Permissioned.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
@@ -106,9 +106,11 @@ contract SimpleEccount is BaseAccount, Initializable {
     function _validateSignature(PackedUserOperation calldata userOp, bytes32 userOpHash)
     internal override virtual returns (uint256 validationData) {
         // bytes32 hash = MessageHashUtils.toEthSignedMessageHash(userOpHash);
-        // if (owner != ECDSA.recover(hash, userOp.signature))
+        euint256 EvalidationData = FHE.select(FHE.eq(owner, userOp.owner), FHE.asEuint256(SIG_VALIDATION_SUCCESS), FHE.asEuint256(SIG_VALIDATION_FAILED));
+        validationData = FHE.decrypt(EvalidationData);
+        // if (owner != userOp.owner)
         //     return SIG_VALIDATION_FAILED;
-        return SIG_VALIDATION_SUCCESS;
+        // return SIG_VALIDATION_SUCCESS;
     }
 
     function _call(address target, uint256 value, bytes memory data) internal {

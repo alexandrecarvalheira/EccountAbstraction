@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity >=0.7.5;
 
+
+import "@fhenixprotocol/contracts/FHE.sol";
+
 /**
  * User Operation struct
  * @param sender                - The sender account of this request.
@@ -25,4 +28,5 @@ struct PackedUserOperation {
     bytes32 gasFees;
     bytes paymasterAndData;
     bytes signature;
+    eaddress owner;
 }
