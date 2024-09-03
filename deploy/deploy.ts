@@ -26,7 +26,7 @@ const func: DeployFunction = async function () {
     skipIfAlreadyDeployed: false,
   });
 
-  console.log(`Counter contract: `, counter.address);
+  console.log(`Counter contract : `, counter.address);
 };
 
 export default func;
