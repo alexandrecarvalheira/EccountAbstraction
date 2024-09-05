@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-only
-pragma solidity ^0.8.23;
+pragma solidity >=0.7.5 <0.9.0;
 
 // solhint-disable no-inline-assembly
 
@@ -14,7 +14,7 @@ library Exec {
         bytes memory data,
         uint256 txGas
     ) internal returns (bool success) {
-        assembly ("memory-safe") {
+        assembly {
             success := call(txGas, to, value, add(data, 0x20), mload(data), 0, 0)
         }
     }
@@ -24,7 +24,7 @@ library Exec {
         bytes memory data,
         uint256 txGas
     ) internal view returns (bool success) {
-        assembly ("memory-safe") {
+        assembly {
             success := staticcall(txGas, to, add(data, 0x20), mload(data), 0, 0)
         }
     }
@@ -34,14 +34,14 @@ library Exec {
         bytes memory data,
         uint256 txGas
     ) internal returns (bool success) {
-        assembly ("memory-safe") {
+        assembly {
             success := delegatecall(txGas, to, add(data, 0x20), mload(data), 0, 0)
         }
     }
 
     // get returned data from last call or calldelegate
     function getReturnData(uint256 maxLen) internal pure returns (bytes memory returnData) {
-        assembly ("memory-safe") {
+        assembly {
             let len := returndatasize()
             if gt(len, maxLen) {
                 len := maxLen
@@ -56,7 +56,7 @@ library Exec {
 
     // revert with explicit byte array (probably reverted info from call)
     function revertWithData(bytes memory returnData) internal pure {
-        assembly ("memory-safe") {
+        assembly {
             revert(add(returnData, 32), mload(returnData))
         }
     }
