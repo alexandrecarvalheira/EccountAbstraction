@@ -8,10 +8,12 @@ export async function interactAccount() {
   const { fhenixjs, ethers } = hre;
   const accounts = await hre.ethers.getSigners();
   const contractOwner = accounts[0];
+  const invader = accounts[1];
 
-  const factoryAddress = "0xF95c55491C7CaC88D9eEa99BbFBbf55aCe96c0cd";
-  const entrypointAddress = "0xc172fc2df2E4841DFf0e2A8395318E51dB031053";
-  const counterAddress = "0x88d9076cBe1445ad13F63D3b44d95e07582fFe82";
+  const factoryAddress = "0x55fCb0227536B6b509071f4017DDA4ecF031c7c2";
+  const entrypointAddress = "0x3c30BC0FF3e2046436b093BC356f814634429F6f";
+  const counterAddress = "0x837dFc1A22Fa3A1cF2C0A33ce37530dAc89e2d2b";
+  const smartAccountAddress = "0x74026fb659D2959188C648FC3Cae8d635b993B5D";
 
   const entrypoint = await hre.ethers.getContractAt(
     "EntryPoint",
@@ -25,6 +27,17 @@ export async function interactAccount() {
     contractOwner,
   );
 
+  const smartAccount = await hre.ethers.getContractAt(
+    "SimpleEccount",
+    smartAccountAddress,
+    contractOwner,
+  );
+
+  console.log("smartAccount owner:", await smartAccount.getOwner());
+
+  const smartEccountFactory = await hre.ethers.getContractFactory(
+    "SimpleEccount",
+  );
   const counterFactory = await hre.ethers.getContractFactory("Counter");
 
   const Factory = await hre.ethers.getContractAt(
@@ -34,13 +47,15 @@ export async function interactAccount() {
   );
 
   const Eowner = await fhenixjs.encrypt_address(contractOwner.address);
+  const Einvader = await fhenixjs.encrypt_address(invader.address);
 
-  const smartAddress = await Factory.getEddress(Eowner, 1);
-  console.log("smartAddress", smartAddress.getBalance);
+  console.log("smartAddress", smartAccountAddress);
+
+  await hre.fhenixjs.getFunds(smartAccountAddress);
 
   //   const transfer = await contractOwner.sendTransaction({
-  //     to: smartAddress,
-  //     value: ethers.parseEther("0.1"),
+  //     to: smartAccountAddress,
+  //     value: ethers.parseEther("3"),
   //   });
 
   //   console.log("transfer", transfer);
@@ -65,32 +80,36 @@ export async function interactAccount() {
   //     inEaddress owner;
   //   }
 
-  const encyrptedAmount = await fhenixjs.encrypt_uint32(2);
+  //   const encyrptedAmount = await fhenixjs.encrypt_uint32(2);
   console.log("counter", await counter.getCounter());
 
-  const callData = counterFactory.interface.encodeFunctionData("add", [
-    encyrptedAmount,
-  ]);
+  const callData = smartEccountFactory.interface.encodeFunctionData("execute");
 
   const userOp = {
-    sender: smartAddress,
-    nonce: 0,
+    sender: smartAccountAddress,
+    nonce:
+      "0x" + (await entrypoint.getNonce(smartAccountAddress, 0)).toString(16),
     initCode: "0x",
     callData,
-    callGasLimit: 400_000,
-    verificationGasLimit: 400_000,
-    preVerificationGas: 100_000,
-    maxFeePerGas: hre.ethers.parseUnits("20", "gwei"),
-    maxPriorityFeePerGas: hre.ethers.parseUnits("10", "gwei"),
+    callGasLimit: 20000_000,
+    verificationGasLimit: 10000_000,
+    preVerificationGas: 20_000,
+    maxFeePerGas: hre.ethers.parseUnits("40", "gwei"),
+    maxPriorityFeePerGas: hre.ethers.parseUnits("20", "gwei"),
     paymasterAndData: "0x",
     signature: "0x",
     owner: Eowner,
   };
 
-  const result = await entrypoint.handleOps([userOp], smartAddress);
+  const { maxFeePerGas } = await ethers.provider.getFeeData();
+  userOp.maxFeePerGas = "0x" + maxFeePerGas.toString(16);
+
+  const result = await entrypoint.handleOps([userOp], smartAccountAddress, {
+    gasLimit: 1500000000,
+  });
   console.log("result", result);
 
-  console.log("counter", await counter.getCounter());
+  console.log("counter", await smartAccount.getCounter());
 }
 
 interactAccount();

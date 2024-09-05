@@ -15,9 +15,12 @@ const func: DeployFunction = async function () {
     if (hre.network.name === "localfhenix") {
       await fhenixjs.getFunds(signer.address);
     } else {
-        console.log(
-            chalk.red("Please fund your account with testnet FHE from https://faucet.fhenix.zone"));
-        return;
+      console.log(
+        chalk.red(
+          "Please fund your account with testnet FHE from https://faucet.fhenix.zone",
+        ),
+      );
+      return;
     }
   }
 
@@ -30,20 +33,26 @@ const func: DeployFunction = async function () {
 
   console.log(`Counter contract : `, counter.address);
 
-  const ret = await deploy(
-    'EntryPoint', {
-      from: signer.address,
-      args: [],
-      log: true,
-      skipIfAlreadyDeployed: false,
-    })
-  console.log('==entrypoint addr=', ret.address)
-  
+  const Eowner = await fhenixjs.encrypt_address(signer.address);
+
+  const ret = await deploy("EntryPoint", {
+    from: signer.address,
+    args: [],
+    log: true,
+    skipIfAlreadyDeployed: false,
+  });
+  console.log("==entrypoint addr=", ret.address);
+
+  const Eaccount = await deploy("SimpleEccount", {
+    from: signer.address,
+    args: [Eowner],
+    log: true,
+    skipIfAlreadyDeployed: false,
+  });
+
+  console.log(`Eaccount contract : `, Eaccount.address);
 };
 
 export default func;
 func.id = "deploy_counter";
 func.tags = ["Counter"];
-
-
-

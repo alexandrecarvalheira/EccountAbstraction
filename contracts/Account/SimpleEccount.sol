@@ -17,60 +17,40 @@ import "../core/BaseAccount.sol";
  *  has execute, eth handling methods
  *  has a single signer that can send requests through the entryPoint.
  */
-contract SimpleEccount is BaseAccount, UUPSUpgradeable, Initializable {
+contract SimpleEccount is BaseAccount, Initializable {
   using ECDSA for bytes32;
-
-  eaddress private owner;
-
   IEntryPoint private immutable _entryPoint;
-
-  event SimpleAccountInitialized(IEntryPoint indexed entryPoint);
-
-  modifier onlyOwner() {
-    _onlyOwner();
-    _;
-  }
-
-  /// @inheritdoc BaseAccount
-  function entryPoint() public view virtual override returns (IEntryPoint) {
-    return _entryPoint;
-  }
+  eaddress public owner;
+  uint256 counter;
+  euint8 private ZERO = FHE.asEuint8(0);
+  euint8 private ONE = FHE.asEuint8(1);
 
   // solhint-disable-next-line no-empty-blocks
   receive() external payable {}
 
-  constructor(IEntryPoint anEntryPoint) {
-    _entryPoint = anEntryPoint;
-    _disableInitializers();
+  constructor(inEaddress memory _owner) {
+    owner = FHE.asEaddress(_owner);
+    _entryPoint = IEntryPoint(
+      address(0x3c30BC0FF3e2046436b093BC356f814634429F6f)
+    );
   }
 
-  function _onlyOwner() internal view {
-    //directly from EOA owner, or through the account itself (which gets redirected through execute())
-    require(msg.sender == address(this), "only owner");
+  function execute() external {
+    counter++;
   }
 
-  /**
-   * execute a transaction (called directly from owner, or by entryPoint)
-   */
-  function execute(address dest, uint256 value, bytes calldata func) external {
-    _requireFromEntryPointOrOwner();
-    _call(dest, value, func);
+  function getOwner() public view returns (address) {
+    eaddress este = FHE.asEaddress(address(this));
+    return FHE.decrypt(este);
   }
 
-  /**
-   * execute a sequence of transactions
-   */
-  function executeBatch(
-    address[] calldata dest,
-    bytes[] calldata func
-  ) external {
-    _requireFromEntryPointOrOwner();
-    require(dest.length == func.length, "wrong array lengths");
-    for (uint256 i = 0; i < dest.length; i++) {
-      _call(dest[i], 0, func[i]);
-    }
+  function getCounter() public view returns (uint256) {
+    return counter;
   }
 
+  function entryPoint() public view virtual override returns (IEntryPoint) {
+    return _entryPoint;
+  }
   /**
    * @dev The _entryPoint member is immutable, to reduce gas consumption.  To upgrade EntryPoint,
    * a new implementation of SimpleAccount must be deployed with the new EntryPoint address, then upgrading
@@ -82,7 +62,6 @@ contract SimpleEccount is BaseAccount, UUPSUpgradeable, Initializable {
 
   function _initialize(eaddress anOwner) internal virtual {
     owner = anOwner;
-    emit SimpleAccountInitialized(_entryPoint);
   }
 
   // Require the function call went through EntryPoint or owner
@@ -98,17 +77,9 @@ contract SimpleEccount is BaseAccount, UUPSUpgradeable, Initializable {
     UserOperation calldata userOp,
     bytes32 userOpHash
   ) internal virtual override returns (uint256 validationData) {
-    // bytes32 hash = MessageHashUtils.toEthSignedMessageHash(userOpHash);
     eaddress anOwner = FHE.asEaddress(userOp.owner);
-    euint256 EvalidationData = FHE.select(
-      FHE.eq(owner, anOwner),
-      FHE.asEuint256(0),
-      FHE.asEuint256(1)
-    );
-    validationData = FHE.decrypt(EvalidationData);
-    // if (owner != userOp.owner)
-    //     return SIG_VALIDATION_FAILED;
-    // return SIG_VALIDATION_SUCCESS;
+    FHE.req(FHE.eq(anOwner, owner));
+    return 0;
   }
 
   function _call(address target, uint256 value, bytes memory data) internal {
@@ -118,36 +89,5 @@ contract SimpleEccount is BaseAccount, UUPSUpgradeable, Initializable {
         revert(add(result, 32), mload(result))
       }
     }
-  }
-
-  /**
-   * check current account deposit in the entryPoint
-   */
-  function getDeposit() public view returns (uint256) {
-    return entryPoint().balanceOf(address(this));
-  }
-
-  /**
-   * deposit more funds for this account in the entryPoint
-   */
-  function addDeposit() public payable {
-    entryPoint().depositTo{value: msg.value}(address(this));
-  }
-
-  /**
-   * withdraw value from the account's deposit
-   * @param withdrawAddress target to send to
-   * @param amount to withdraw
-   */
-  function withdrawDepositTo(
-    address payable withdrawAddress,
-    uint256 amount
-  ) public onlyOwner {
-    entryPoint().withdrawTo(withdrawAddress, amount);
-  }
-
-  function _authorizeUpgrade(address newImplementation) internal view override {
-    (newImplementation);
-    _onlyOwner();
   }
 }

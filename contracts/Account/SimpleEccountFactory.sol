@@ -15,10 +15,11 @@ import "./SimpleEccount.sol";
  * This way, the entryPoint.getSenderAddress() can be called either before or after the account is created.
  */
 contract SimpleEccountFactory {
-  SimpleEccount public immutable accountImplementation;
+  IEntryPoint entryPoint;
+  mapping(eaddress => address) private accounts;
 
   constructor(IEntryPoint _entryPoint) {
-    accountImplementation = new SimpleEccount(_entryPoint);
+    entryPoint = _entryPoint;
   }
 
   /**
@@ -37,14 +38,8 @@ contract SimpleEccountFactory {
     if (codeSize > 0) {
       return SimpleEccount(payable(addr));
     }
-    ret = SimpleEccount(
-      payable(
-        new ERC1967Proxy{salt: bytes32(salt)}(
-          address(accountImplementation),
-          abi.encodeCall(SimpleEccount.initialize, (owner))
-        )
-      )
-    );
+    ret = new SimpleEccount(_owner);
+    accounts[owner] = address(ret);
   }
 
   /**
@@ -54,19 +49,7 @@ contract SimpleEccountFactory {
     eaddress owner,
     uint256 salt
   ) private view returns (address) {
-    return
-      Create2.computeAddress(
-        bytes32(salt),
-        keccak256(
-          abi.encodePacked(
-            type(ERC1967Proxy).creationCode,
-            abi.encode(
-              address(accountImplementation),
-              abi.encodeCall(SimpleEccount.initialize, (owner))
-            )
-          )
-        )
-      );
+    return accounts[owner];
   }
 
   function getEddress(
@@ -74,6 +57,7 @@ contract SimpleEccountFactory {
     uint256 salt
   ) public view returns (address) {
     eaddress owner = FHE.asEaddress(_owner);
+
     return getAddress(owner, salt);
   }
 }
