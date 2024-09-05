@@ -9,9 +9,9 @@ export async function interactAccount() {
   const accounts = await hre.ethers.getSigners();
   const contractOwner = accounts[0];
 
-  const factoryAddress = "0x5c93e3B7824035B375E373FaC1578D4089dcE77A";
-  const entrypointAddress = "0xB170fC5BAC4a87A63fC84653Ee7e0db65CC62f96";
-  const counterAddress = "0xbeb4eF1fcEa618C6ca38e3828B00f8D481EC2CC2";
+  const factoryAddress = "0xF95c55491C7CaC88D9eEa99BbFBbf55aCe96c0cd";
+  const entrypointAddress = "0xc172fc2df2E4841DFf0e2A8395318E51dB031053";
+  const counterAddress = "0x88d9076cBe1445ad13F63D3b44d95e07582fFe82";
 
   const entrypoint = await hre.ethers.getContractAt(
     "EntryPoint",
@@ -36,6 +36,7 @@ export async function interactAccount() {
   const Eowner = await fhenixjs.encrypt_address(contractOwner.address);
 
   const smartAddress = await Factory.getEddress(Eowner, 1);
+  console.log("smartAddress", smartAddress.getBalance);
 
   //   const transfer = await contractOwner.sendTransaction({
   //     to: smartAddress,
@@ -49,18 +50,21 @@ export async function interactAccount() {
   // call entrypoint w userOp arguments to interact with the counter
   // do it again with the other account to check that only the owner can interact with the counter
 
-  //   struct PackedUserOperation {0
+  //   struct UserOperation {
   //     address sender;
   //     uint256 nonce;
   //     bytes initCode;
   //     bytes callData;
-  //     bytes32 accountGasLimits;
+  //     uint256 callGasLimit;
+  //     uint256 verificationGasLimit;
   //     uint256 preVerificationGas;
-  //     bytes32 gasFees;
+  //     uint256 maxFeePerGas;
+  //     uint256 maxPriorityFeePerGas;
   //     bytes paymasterAndData;
   //     bytes signature;
   //     inEaddress owner;
-  // }
+  //   }
+
   const encyrptedAmount = await fhenixjs.encrypt_uint32(2);
   console.log("counter", await counter.getCounter());
 
@@ -68,28 +72,22 @@ export async function interactAccount() {
     encyrptedAmount,
   ]);
 
-  const accountGasLimits = concat([
-    pad(numberToHex(500_000), { size: 16 }),
-    pad(numberToHex(500_000), { size: 16 }),
-  ]);
-  const gasFees = concat([
-    pad(numberToHex(500_000), { size: 16 }),
-    pad(numberToHex(500_000), { size: 16 }),
-  ]);
   const userOp = {
     sender: smartAddress,
     nonce: 0,
     initCode: "0x",
     callData,
-    accountGasLimits,
-    preVerificationGas: 500_000,
-    gasFees,
+    callGasLimit: 400_000,
+    verificationGasLimit: 400_000,
+    preVerificationGas: 100_000,
+    maxFeePerGas: hre.ethers.parseUnits("20", "gwei"),
+    maxPriorityFeePerGas: hre.ethers.parseUnits("10", "gwei"),
     paymasterAndData: "0x",
     signature: "0x",
     owner: Eowner,
   };
 
-  const result = await entrypoint.handleOps([userOp], contractOwner.address);
+  const result = await entrypoint.handleOps([userOp], smartAddress);
   console.log("result", result);
 
   console.log("counter", await counter.getCounter());

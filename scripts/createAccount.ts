@@ -5,7 +5,7 @@ export async function createAccount() {
   const { fhenixjs, ethers } = hre;
   const accounts = await hre.ethers.getSigners();
   const contractOwner = accounts[0];
-  const factoryAddress = "0x5c93e3B7824035B375E373FaC1578D4089dcE77A";
+  const factoryAddress = "0xF95c55491C7CaC88D9eEa99BbFBbf55aCe96c0cd";
 
   const Factory = await hre.ethers.getContractAt(
     "SimpleEccountFactory",

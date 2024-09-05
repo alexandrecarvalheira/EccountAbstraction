@@ -5,21 +5,21 @@ pragma solidity ^0.8.23;
 /* solhint-disable no-inline-assembly */
 /* solhint-disable reason-string */
 import {FHE} from "@fhenixprotocol/contracts/FHE.sol";
-import {Permissioned, Permission} from "@fhenixprotocol/contracts/access/Permissioned.sol";
+
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import "../core/BaseAccount.sol";
-import "../core/Helpers.sol";
 
+import "../core/BaseAccount.sol";
 /**
  * minimal account.
  *  this is sample minimal account.
  *  has execute, eth handling methods
  *  has a single signer that can send requests through the entryPoint.
  */
-contract SimpleEccount is BaseAccount, Initializable {
+contract SimpleEccount is BaseAccount, UUPSUpgradeable, Initializable {
+  using ECDSA for bytes32;
+
   eaddress private owner;
 
   IEntryPoint private immutable _entryPoint;
@@ -51,9 +51,6 @@ contract SimpleEccount is BaseAccount, Initializable {
 
   /**
    * execute a transaction (called directly from owner, or by entryPoint)
-   * @param dest destination address to call
-   * @param value the value to pass in this call
-   * @param func the calldata to pass in this call
    */
   function execute(address dest, uint256 value, bytes calldata func) external {
     _requireFromEntryPointOrOwner();
@@ -62,30 +59,15 @@ contract SimpleEccount is BaseAccount, Initializable {
 
   /**
    * execute a sequence of transactions
-   * @dev to reduce gas consumption for trivial case (no value), use a zero-length array to mean zero value
-   * @param dest an array of destination addresses
-   * @param value an array of values to pass to each call. can be zero-length for no-value calls
-   * @param func an array of calldata to pass to each call
    */
   function executeBatch(
     address[] calldata dest,
-    uint256[] calldata value,
     bytes[] calldata func
   ) external {
     _requireFromEntryPointOrOwner();
-    require(
-      dest.length == func.length &&
-        (value.length == 0 || value.length == func.length),
-      "wrong array lengths"
-    );
-    if (value.length == 0) {
-      for (uint256 i = 0; i < dest.length; i++) {
-        _call(dest[i], 0, func[i]);
-      }
-    } else {
-      for (uint256 i = 0; i < dest.length; i++) {
-        _call(dest[i], value[i], func[i]);
-      }
+    require(dest.length == func.length, "wrong array lengths");
+    for (uint256 i = 0; i < dest.length; i++) {
+      _call(dest[i], 0, func[i]);
     }
   }
 
@@ -93,7 +75,6 @@ contract SimpleEccount is BaseAccount, Initializable {
    * @dev The _entryPoint member is immutable, to reduce gas consumption.  To upgrade EntryPoint,
    * a new implementation of SimpleAccount must be deployed with the new EntryPoint address, then upgrading
    * the implementation by calling `upgradeTo()`
-   * @param anOwner the owner (signer) of this account
    */
   function initialize(eaddress anOwner) public virtual initializer {
     _initialize(anOwner);
@@ -114,7 +95,7 @@ contract SimpleEccount is BaseAccount, Initializable {
 
   /// implement template method of BaseAccount
   function _validateSignature(
-    PackedUserOperation calldata userOp,
+    UserOperation calldata userOp,
     bytes32 userOpHash
   ) internal virtual override returns (uint256 validationData) {
     // bytes32 hash = MessageHashUtils.toEthSignedMessageHash(userOpHash);
@@ -163,5 +144,10 @@ contract SimpleEccount is BaseAccount, Initializable {
     uint256 amount
   ) public onlyOwner {
     entryPoint().withdrawTo(withdrawAddress, amount);
+  }
+
+  function _authorizeUpgrade(address newImplementation) internal view override {
+    (newImplementation);
+    _onlyOwner();
   }
 }
