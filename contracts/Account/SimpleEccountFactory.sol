@@ -52,4 +52,9 @@ contract SimpleEccountFactory {
                 )
             )));
     }
+
+    function getEddress(inEaddress calldata _owner,uint256 salt) public view returns (address) {
+        eaddress owner = FHE.asEaddress(_owner);
+        return getAddress(owner, salt);
+    }
 }
