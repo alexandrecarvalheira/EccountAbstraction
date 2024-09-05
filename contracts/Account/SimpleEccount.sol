@@ -20,7 +20,7 @@ import "../core/Helpers.sol";
   *  has a single signer that can send requests through the entryPoint.
   */
 contract SimpleEccount is BaseAccount, Initializable {
-    eaddress public owner;
+    eaddress private owner;
 
     IEntryPoint private immutable _entryPoint;
 
@@ -106,7 +106,8 @@ contract SimpleEccount is BaseAccount, Initializable {
     function _validateSignature(PackedUserOperation calldata userOp, bytes32 userOpHash)
     internal override virtual returns (uint256 validationData) {
         // bytes32 hash = MessageHashUtils.toEthSignedMessageHash(userOpHash);
-        euint256 EvalidationData = FHE.select(FHE.eq(owner, userOp.owner), FHE.asEuint256(SIG_VALIDATION_SUCCESS), FHE.asEuint256(SIG_VALIDATION_FAILED));
+                eaddress anOwner = FHE.asEaddress(userOp.owner);
+        euint256 EvalidationData = FHE.select(FHE.eq(owner, anOwner), FHE.asEuint256(SIG_VALIDATION_SUCCESS), FHE.asEuint256(SIG_VALIDATION_FAILED));
         validationData = FHE.decrypt(EvalidationData);
         // if (owner != userOp.owner)
         //     return SIG_VALIDATION_FAILED;

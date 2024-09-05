@@ -32,8 +32,17 @@ const accounts: string[] = [keys];
 
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.25",
+  solidity: {
+    version: "0.8.25",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 1000,
+      },
+    },
+  },
   defaultNetwork: "localfhenix",
+
   networks: {
     testnet: testnetConfig,
   },

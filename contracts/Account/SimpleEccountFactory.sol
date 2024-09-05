@@ -14,7 +14,7 @@ import "./SimpleEccount.sol";
  * The factory's createAccount returns the target account address even if it is already installed.
  * This way, the entryPoint.getSenderAddress() can be called either before or after the account is created.
  */
-contract SimpleAccountFactory {
+contract SimpleEccountFactory {
     SimpleEccount public immutable accountImplementation;
 
     constructor(IEntryPoint _entryPoint) {
@@ -27,7 +27,8 @@ contract SimpleAccountFactory {
      * Note that during UserOperation execution, this method is called only if the account is not deployed.
      * This method returns an existing account address so that entryPoint.getSenderAddress() would work even after account creation
      */
-    function createAccount(eaddress owner,uint256 salt) public returns (SimpleEccount ret) {
+    function createAccount(inEaddress calldata _owner,uint256 salt) public returns (SimpleEccount ret) {
+        eaddress owner = FHE.asEaddress(_owner);
         address addr = getAddress(owner, salt);
         uint256 codeSize = addr.code.length;
         if (codeSize > 0) {
@@ -42,7 +43,7 @@ contract SimpleAccountFactory {
     /**
      * calculate the counterfactual address of this account as it would be returned by createAccount()
      */
-    function getAddress(eaddress owner,uint256 salt) public view returns (address) {
+    function getAddress(eaddress owner,uint256 salt) private view returns (address) {
         return Create2.computeAddress(bytes32(salt), keccak256(abi.encodePacked(
                 type(ERC1967Proxy).creationCode,
                 abi.encode(

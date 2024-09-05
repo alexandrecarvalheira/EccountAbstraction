@@ -28,5 +28,5 @@ struct PackedUserOperation {
     bytes32 gasFees;
     bytes paymasterAndData;
     bytes signature;
-    eaddress owner;
+    inEaddress owner;
 }
