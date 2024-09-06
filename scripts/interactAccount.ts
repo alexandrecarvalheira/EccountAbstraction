@@ -2,25 +2,19 @@ import axios from "axios";
 const hre = require("hardhat");
 
 export async function interactAccount() {
-  const { fhenixjs, ethers } = hre;
+  const { fhenixjs, ethers, deployments } = hre;
   const accounts = await hre.ethers.getSigners();
   const contractOwner = accounts[0];
   const invader = accounts[1];
 
-  const factoryAddress = "0x55fCb0227536B6b509071f4017DDA4ecF031c7c2";
-  const entrypointAddress = "0x3c30BC0FF3e2046436b093BC356f814634429F6f";
-  const counterAddress = "0x837dFc1A22Fa3A1cF2C0A33ce37530dAc89e2d2b";
-  const smartAccountAddress = "0x74026fb659D2959188C648FC3Cae8d635b993B5D";
+  const entrypointDeployment = await deployments.get("EntryPoint");
+  const entrypointAddress = await entrypointDeployment.address;
+  const smartAccountDeployment = await deployments.get("SimpleEccount");
+  const smartAccountAddress = await smartAccountDeployment.address;
 
   const entrypoint = await hre.ethers.getContractAt(
     "EntryPoint",
     entrypointAddress,
-    contractOwner,
-  );
-
-  const counter = await hre.ethers.getContractAt(
-    "Counter",
-    counterAddress,
     contractOwner,
   );
 
@@ -30,23 +24,12 @@ export async function interactAccount() {
     contractOwner,
   );
 
-  console.log("smartAccount owner:", await smartAccount.getOwner());
-
   const smartEccountFactory = await hre.ethers.getContractFactory(
     "SimpleEccount",
-  );
-  const counterFactory = await hre.ethers.getContractFactory("Counter");
-
-  const Factory = await hre.ethers.getContractAt(
-    "SimpleEccountFactory",
-    factoryAddress,
-    contractOwner,
   );
 
   const Eowner = await fhenixjs.encrypt_address(contractOwner.address);
   const Einvader = await fhenixjs.encrypt_address(invader.address);
-
-  console.log("smartAddress", smartAccountAddress);
 
   await hre.fhenixjs.getFunds(smartAccountAddress);
 
@@ -78,11 +61,11 @@ export async function interactAccount() {
   //   }
 
   //   const encyrptedAmount = await fhenixjs.encrypt_uint32(2);
-  console.log("counter", await counter.getCounter());
+  console.log("initial counter", await smartAccount.getCounter());
 
   const callData = smartEccountFactory.interface.encodeFunctionData("execute");
 
-  const userOp = {
+  const userOp1 = {
     sender: smartAccountAddress,
     nonce:
       "0x" + (await entrypoint.getNonce(smartAccountAddress, 0)).toString(16),
@@ -97,16 +80,45 @@ export async function interactAccount() {
     signature: "0x",
     owner: Eowner,
   };
-
+  const userOp2 = {
+    sender: smartAccountAddress,
+    nonce:
+      "0x" + (await entrypoint.getNonce(smartAccountAddress, 0)).toString(16),
+    initCode: "0x",
+    callData,
+    callGasLimit: 20000_000,
+    verificationGasLimit: 10000_000,
+    preVerificationGas: 20_000,
+    maxFeePerGas: hre.ethers.parseUnits("40", "gwei"),
+    maxPriorityFeePerGas: hre.ethers.parseUnits("20", "gwei"),
+    paymasterAndData: "0x",
+    signature: "0x",
+    owner: Einvader,
+  };
   const { maxFeePerGas } = await ethers.provider.getFeeData();
-  userOp.maxFeePerGas = "0x" + maxFeePerGas.toString(16);
 
-  const result = await entrypoint.handleOps([userOp], smartAccountAddress, {
+  userOp1.maxFeePerGas = "0x" + maxFeePerGas.toString(16);
+
+  userOp2.maxFeePerGas = "0x" + maxFeePerGas.toString(16);
+
+  await entrypoint.handleOps([userOp1], smartAccountAddress, {
     gasLimit: 1500000000,
   });
-  console.log("result", result);
+  console.log("sending UserOp from Owner.....");
 
-  console.log("counter", await smartAccount.getCounter());
+  console.log("new counter:", await smartAccount.getCounter());
+
+  console.log("sending UserOp from wrong Owner.....");
+
+  try {
+    await entrypoint.handleOps([userOp2], smartAccountAddress, {
+      gasLimit: 1500000000,
+    });
+  } catch (e) {
+    console.log(e);
+  }
+
+  console.log("new counter:", await smartAccount.getCounter());
 }
 
 interactAccount();
