@@ -1,7 +1,4 @@
 import axios from "axios";
-import { concat } from "../utils/concat";
-import { pad } from "../utils/pad";
-import { numberToHex } from "../utils/toHex";
 const hre = require("hardhat");
 
 export async function interactAccount() {

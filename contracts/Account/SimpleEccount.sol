@@ -6,7 +6,6 @@ pragma solidity ^0.8.23;
 /* solhint-disable reason-string */
 import {FHE} from "@fhenixprotocol/contracts/FHE.sol";
 
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
@@ -18,7 +17,6 @@ import "../core/BaseAccount.sol";
  *  has a single signer that can send requests through the entryPoint.
  */
 contract SimpleEccount is BaseAccount, Initializable {
-  using ECDSA for bytes32;
   IEntryPoint private immutable _entryPoint;
   eaddress public owner;
   uint256 counter;
